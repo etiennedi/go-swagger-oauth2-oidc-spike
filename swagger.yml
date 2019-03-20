@@ -1,0 +1,21 @@
+consumes:
+- application/io.goswagger.examples.todo-list.v1+json
+info:
+  description: From the todo list tutorial on goswagger.io
+  title: spikeyfoo
+  version: 1.0.0
+paths: 
+  /foo:
+    get:
+      tags:
+        - foo
+      responses:
+        200:
+          description: some-endpoint
+          schema:
+            type: string
+produces:
+- application/io.goswagger.examples.todo-list.v1+json
+schemes:
+- http
+swagger: "2.0"
