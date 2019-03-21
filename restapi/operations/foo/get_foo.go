@@ -12,16 +12,16 @@ import (
 )
 
 // GetFooHandlerFunc turns a function with the right signature into a get foo handler
-type GetFooHandlerFunc func(GetFooParams) middleware.Responder
+type GetFooHandlerFunc func(GetFooParams, interface{}) middleware.Responder
 
 // Handle executing the request and returning a response
-func (fn GetFooHandlerFunc) Handle(params GetFooParams) middleware.Responder {
-	return fn(params)
+func (fn GetFooHandlerFunc) Handle(params GetFooParams, principal interface{}) middleware.Responder {
+	return fn(params, principal)
 }
 
 // GetFooHandler interface for that can handle valid get foo params
 type GetFooHandler interface {
-	Handle(GetFooParams) middleware.Responder
+	Handle(GetFooParams, interface{}) middleware.Responder
 }
 
 // NewGetFoo creates a new http.Handler for the get foo operation
@@ -46,12 +46,25 @@ func (o *GetFoo) ServeHTTP(rw http.ResponseWriter, r *http.Request) {
 	}
 	var Params = NewGetFooParams()
 
+	uprinc, aCtx, err := o.Context.Authorize(r, route)
+	if err != nil {
+		o.Context.Respond(rw, r, route.Produces, route, err)
+		return
+	}
+	if aCtx != nil {
+		r = aCtx
+	}
+	var principal interface{}
+	if uprinc != nil {
+		principal = uprinc
+	}
+
 	if err := o.Context.BindValidRequest(r, route, &Params); err != nil { // bind params
 		o.Context.Respond(rw, r, route.Produces, route, err)
 		return
 	}
 
-	res := o.Handler.Handle(Params) // actually handle the request
+	res := o.Handler.Handle(Params, principal) // actually handle the request
 
 	o.Context.Respond(rw, r, route.Produces, route, res)
 

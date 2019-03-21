@@ -49,7 +49,30 @@ func init() {
         }
       }
     }
-  }
+  },
+  "securityDefinitions": {
+    "basic": {
+      "description": "don't ever use this",
+      "type": "basic"
+    },
+    "oidc": {
+      "description": "OIDC (OpenConnect ID - based on OAuth2)",
+      "type": "oauth2",
+      "flow": "implicit",
+      "authorizationUrl": "http://foo"
+    }
+  },
+  "security": [
+    {},
+    {
+      "basic": null
+    },
+    {
+      "oidc": [
+        "foohoo"
+      ]
+    }
+  ]
 }`))
 	FlatSwaggerJSON = json.RawMessage([]byte(`{
   "consumes": [
@@ -83,6 +106,29 @@ func init() {
         }
       }
     }
-  }
+  },
+  "securityDefinitions": {
+    "basic": {
+      "description": "don't ever use this",
+      "type": "basic"
+    },
+    "oidc": {
+      "description": "OIDC (OpenConnect ID - based on OAuth2)",
+      "type": "oauth2",
+      "flow": "implicit",
+      "authorizationUrl": "http://foo"
+    }
+  },
+  "security": [
+    {},
+    {
+      "basic": []
+    },
+    {
+      "oidc": [
+        "foohoo"
+      ]
+    }
+  ]
 }`))
 }

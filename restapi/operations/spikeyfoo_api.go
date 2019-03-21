@@ -39,9 +39,21 @@ func NewSpikeyfooAPI(spec *loads.Document) *SpikeyfooAPI {
 		BearerAuthenticator: security.BearerAuth,
 		JSONConsumer:        runtime.JSONConsumer(),
 		JSONProducer:        runtime.JSONProducer(),
-		FooGetFooHandler: foo.GetFooHandlerFunc(func(params foo.GetFooParams) middleware.Responder {
+		FooGetFooHandler: foo.GetFooHandlerFunc(func(params foo.GetFooParams, principal interface{}) middleware.Responder {
 			return middleware.NotImplemented("operation FooGetFoo has not yet been implemented")
 		}),
+
+		// Applies when the Authorization header is set with the Basic scheme
+		BasicAuth: func(user string, pass string) (interface{}, error) {
+			return nil, errors.NotImplemented("basic auth  (basic) has not yet been implemented")
+		},
+
+		OidcAuth: func(token string, scopes []string) (interface{}, error) {
+			return nil, errors.NotImplemented("oauth2 bearer auth (oidc) has not yet been implemented")
+		},
+
+		// default authorizer is authorized meaning no requests are blocked
+		APIAuthorizer: security.Authorized(),
 	}
 }
 
@@ -72,6 +84,17 @@ type SpikeyfooAPI struct {
 
 	// JSONProducer registers a producer for a "application/io.goswagger.examples.todo-list.v1+json" mime type
 	JSONProducer runtime.Producer
+
+	// BasicAuth registers a function that takes username and password and returns a principal
+	// it performs authentication with basic auth
+	BasicAuth func(string, string) (interface{}, error)
+
+	// OidcAuth registers a function that takes an access token and a collection of required scopes and returns a principal
+	// it performs authentication based on an oauth2 bearer token provided in the request
+	OidcAuth func(string, []string) (interface{}, error)
+
+	// APIAuthorizer provides access control (ACL/RBAC/ABAC) by providing access to the request and authenticated principal
+	APIAuthorizer runtime.Authorizer
 
 	// FooGetFooHandler sets the operation handler for the get foo operation
 	FooGetFooHandler foo.GetFooHandler
@@ -138,6 +161,14 @@ func (o *SpikeyfooAPI) Validate() error {
 		unregistered = append(unregistered, "JSONProducer")
 	}
 
+	if o.BasicAuth == nil {
+		unregistered = append(unregistered, "BasicAuth")
+	}
+
+	if o.OidcAuth == nil {
+		unregistered = append(unregistered, "OidcAuth")
+	}
+
 	if o.FooGetFooHandler == nil {
 		unregistered = append(unregistered, "foo.GetFooHandler")
 	}
@@ -157,14 +188,28 @@ func (o *SpikeyfooAPI) ServeErrorFor(operationID string) func(http.ResponseWrite
 // AuthenticatorsFor gets the authenticators for the specified security schemes
 func (o *SpikeyfooAPI) AuthenticatorsFor(schemes map[string]spec.SecurityScheme) map[string]runtime.Authenticator {
 
-	return nil
+	result := make(map[string]runtime.Authenticator)
+	for name, scheme := range schemes {
+		switch name {
+
+		case "basic":
+			_ = scheme
+			result[name] = o.BasicAuthenticator(o.BasicAuth)
+
+		case "oidc":
+
+			result[name] = o.BearerAuthenticator(scheme.Name, o.OidcAuth)
+
+		}
+	}
+	return result
 
 }
 
 // Authorizer returns the registered authorizer
 func (o *SpikeyfooAPI) Authorizer() runtime.Authorizer {
 
-	return nil
+	return o.APIAuthorizer
 
 }
 

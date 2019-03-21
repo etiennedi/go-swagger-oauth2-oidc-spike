@@ -16,6 +16,19 @@ paths:
             type: string
 produces:
 - application/io.goswagger.examples.todo-list.v1+json
+security:
+  - {}
+  - basic: []
+  - oidc: [foohoo]
+securityDefinitions: 
+  basic: 
+    type: basic
+    description: don't ever use this
+  oidc:
+    type: oauth2
+    description: OIDC (OpenConnect ID - based on OAuth2)
+    flow: implicit
+    authorizationUrl: http://foo
 schemes:
 - http
 swagger: "2.0"

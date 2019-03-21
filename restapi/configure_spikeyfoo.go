@@ -3,9 +3,14 @@
 package restapi
 
 import (
+	"context"
 	"crypto/tls"
+	"fmt"
 	"net/http"
+	"os"
 
+	"github.com/coreos/go-oidc"
+	"github.com/davecgh/go-spew/spew"
 	errors "github.com/go-openapi/errors"
 	runtime "github.com/go-openapi/runtime"
 	middleware "github.com/go-openapi/runtime/middleware"
@@ -18,6 +23,19 @@ import (
 
 func configureFlags(api *operations.SpikeyfooAPI) {
 	// api.CommandLineOptionsGroups = []swag.CommandLineOptionsGroup{ ... }
+}
+
+func setupOIDC() (*oidc.IDTokenVerifier, error) {
+	provider, err := oidc.NewProvider(context.Background(), "http://localhost:8090/auth/realms/master")
+	if err != nil {
+		return nil, err
+	}
+
+	verifier := provider.Verifier(&oidc.Config{
+		ClientID: "spikeyfoo",
+	})
+
+	return verifier, nil
 }
 
 func configureAPI(api *operations.SpikeyfooAPI) http.Handler {
@@ -34,7 +52,24 @@ func configureAPI(api *operations.SpikeyfooAPI) http.Handler {
 
 	api.JSONProducer = runtime.JSONProducer()
 
-	api.FooGetFooHandler = foo.GetFooHandlerFunc(func(params foo.GetFooParams) middleware.Responder {
+	verifier, err := setupOIDC()
+	if err != nil {
+		fmt.Println(err)
+		os.Exit(1)
+	}
+
+	api.OidcAuth = func(rawToken string, scopes []string) (interface{}, error) {
+		token, err := verifier.Verify(context.Background(), rawToken)
+		if err != nil {
+			return nil, fmt.Errorf("validation failed: %s", err)
+		}
+
+		spew.Dump(token)
+		return token, nil
+	}
+
+	api.FooGetFooHandler = foo.GetFooHandlerFunc(func(params foo.GetFooParams, principal interface{}) middleware.Responder {
+		spew.Dump(principal)
 		return foo.NewGetFooOK().WithPayload("Hello world")
 	})
 
